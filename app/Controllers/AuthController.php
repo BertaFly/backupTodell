@@ -45,7 +45,7 @@ class AuthController extends Controller
 		if (count($fromDb) !== 0 && password_verify($request->getParam('pass'), $fromDb['password']) && $fromDb['isEmailConfirmed'] === 1)
 		{
 			$jwt = $this->generateToken($request->getParam('login'), $fromDb['id']);
-			$result->user = $jwt;
+			$result->jwt = $jwt;
 			//record after login that user's last visit of our site has just happened
 			date_default_timezone_set ('Europe/Kiev');
 			$date = date('Y-m-d G:i:s');
@@ -55,6 +55,6 @@ class AuthController extends Controller
             $affectedRows = $updateStatement->execute();
 			return json_encode($result);
 		}
-		return json_encode($false);
+		return json_encode(false);
 	}
 }
