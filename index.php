@@ -44,6 +44,14 @@ $container['view'] = function($container) {
 	return $view;
 };
 
+// $container['validator'] = function($container) { usefull function but we re not allowed use external validation
+// 	return new \App\Validation\Validator;
+// };
+
+$container['mail'] = function($container) {
+	return new \App\Mail\SendMail;
+};
+
 $container['HomeController'] = function ($container) {
 	return new \App\Controllers\HomeController($container);
 };
