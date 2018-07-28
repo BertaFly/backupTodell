@@ -9,8 +9,10 @@ $app->post('/auth/signup', 'AuthController:postSignUp');
 $app->post('/auth/reset', 'AuthController:postResetPass');
 
 $app->get('/auth/confirmRegistration', 'AuthController:getConfirmRegistr');
-$app->get('/auth/confirmRegistration', 'AuthController:confirmResetPass');
+$app->get('/auth/confirmResetPass', 'AuthController:confirmResetPass');
 
+$app->post('/user/isFull', 'UserController:postCheckProfileIsFull');
+$app->post('/user/getAllInfo', 'UserController:postGetAllInfo');
 
 // $app->post('/auth/signup', 'AuthController:postSignUp');
 

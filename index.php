@@ -60,7 +60,11 @@ $container['AuthController'] = function ($container) {
 	return new \App\Controllers\AuthController($container);
 };
 
-v::with('App\\Validation\\Rules\\');
+$container['UserController'] = function ($container) {
+	return new \App\Controllers\UserController($container);
+};
+
+// v::with('App\\Validation\\Rules\\');
 
 require __DIR__ . '/app/config/routes.php';
 

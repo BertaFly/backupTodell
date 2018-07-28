@@ -5,7 +5,7 @@ use App\Models\Model;
 use App\Mail\SendMail;
 // use Respect\Validation\Validator as v;
 
-use Slim\Views\Twig as View;
+// use Slim\Views\Twig as View;
 
 class AuthController extends Controller
 {
@@ -25,7 +25,7 @@ class AuthController extends Controller
 		$header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
 
 		// Create token payload as a JSON string
-		$payload = json_encode(['user_login' => $login, 'user_id' => $id,'exp' => $expiration]);
+		$payload = json_encode(['userLogin' => $login, 'userId' => $id,'exp' => $expiration]);
 
 		// Encode Header to Base64Url String
 		$base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
@@ -61,10 +61,10 @@ class AuthController extends Controller
 			date_default_timezone_set ('Europe/Kiev');
 			$date = date('Y-m-d G:i:s');
 			$updateStatement = $db->update(array('last_seen' => $date))
-                       ->table('users')
-                       ->where('id', '=', 1);
-            $affectedRows = $updateStatement->execute();
-            //probably should do insertion in table where all online users are recorded
+					   ->table('users')
+					   ->where('id', '=', 1);
+			$affectedRows = $updateStatement->execute();
+			//probably should do insertion in table where all online users are recorded
 			return json_encode($result);
 		}
 		return json_encode(false);
@@ -121,11 +121,11 @@ class AuthController extends Controller
 			date_default_timezone_set ('Europe/Kiev');
 			$last_seen = date('Y-m-d G:i:s');
 			$insertStatement = $db->insert(array('login', 'password', 'email', 'fname', 'lname', 'token', 'isEmailConfirmed', 'last_seen', 'famerating'))
-                           ->into('users')
-                           ->values(array($login, $pass, $email, $fname, $lname, $token, 0, $last_seen, 1));
-            $insertId = $insertStatement->execute(false);
-            $this->mail->sendMail($email, "Please, folow this link to confirm your account: http://localhost:8080/auth/confirmRegistration?email=" . $email . "&token=" . $token, "Registration");
-            return json_encode(true);
+						   ->into('users')
+						   ->values(array($login, $pass, $email, $fname, $lname, $token, 0, $last_seen, 1));
+			$insertId = $insertStatement->execute(false);
+			$this->mail->sendMail($email, "Please, folow this link to confirm your account: http://localhost:8080/auth/confirmRegistration?email=" . $email . "&token=" . $token, "Registration");
+			return json_encode(true);
 		}
 		else
 		{
@@ -146,11 +146,17 @@ class AuthController extends Controller
 		else
 		{
 			$updateStatement = $db->update(array('isEmailConfirmed' => 1))
-                           ->table('users')
-                           ->where('email', '=', $_GET['email']);
+						   ->table('users')
+						   ->where('email', '=', $_GET['email']);
 			$exec = $updateStatement->execute();
+
+			//create in profiles table new user, who confirmed email, so it will use our servise for sure
+			$insertStatement = $db->insert(array('userId'))
+						   ->into('profiles')
+						   ->values(array($fromDb['id']));
+			$insertId = $insertStatement->execute(false);
 			header("Location: http://localhost:3000");
-       		die();
+			die();
 		}
 		// return true;
 	}
@@ -167,11 +173,11 @@ class AuthController extends Controller
 		else
 		{
 			$updateStatement = $db->update(array('password' => $_GET['pass']))
-                           ->table('users')
-                           ->where('email', '=', $_GET['email']);
+						   ->table('users')
+						   ->where('email', '=', $_GET['email']);
 			$exec = $updateStatement->execute();
 			header("Location: http://localhost:3000");
-       		die();
+			die();
 		}
 		// return true;
 	}
@@ -202,8 +208,8 @@ class AuthController extends Controller
 		$pass = password_hash($request->getParam('pass'), PASSWORD_DEFAULT);
 		$token = $this->generateTokenConfirm();
 		$updateStatement = $db->update(array('token' => $token))
-                           ->table('users')
-                           ->where('email', '=', $email);
+						   ->table('users')
+						   ->where('email', '=', $email);
 		$exec = $updateStatement->execute();
 		$this->mail->sendMail($email, "Please, folow this link to confirm your new password: http://localhost:8080/auth/confirmResetPass?email=" . $email . "&pass=" . $pass . "&token=" . $token, "Restore Password");
 	}
