@@ -55,14 +55,14 @@ class AuthController extends Controller
 
 		if (count($fromDb) !== 0 && password_verify($request->getParam('pass'), $fromDb['password']) && $fromDb['isEmailConfirmed'] === 1)
 		{
-			$jwt = $this->generateToken($login, $fromDb['id']);
+			$jwt = $this->generateToken($login, $fromDb['userId']);
 			$result->jwt = $jwt;
 			//record after login that user's last visit of our site has just happened
 			date_default_timezone_set ('Europe/Kiev');
 			$date = date('Y-m-d G:i:s');
 			$updateStatement = $db->update(array('last_seen' => $date))
 					   ->table('users')
-					   ->where('id', '=', 1);
+					   ->where('userId', '=', $fromDb['userId']);
 			$affectedRows = $updateStatement->execute();
 			//probably should do insertion in table where all online users are recorded
 			return json_encode($result);
@@ -120,9 +120,9 @@ class AuthController extends Controller
 			$token = $this->generateTokenConfirm();
 			date_default_timezone_set ('Europe/Kiev');
 			$last_seen = date('Y-m-d G:i:s');
-			$insertStatement = $db->insert(array('login', 'password', 'email', 'fname', 'lname', 'token', 'isEmailConfirmed', 'last_seen', 'famerating'))
+			$insertStatement = $db->insert(array('login', 'password', 'email', 'fname', 'lname', 'token', 'isEmailConfirmed', 'last_seen'))
 						   ->into('users')
-						   ->values(array($login, $pass, $email, $fname, $lname, $token, 0, $last_seen, 1));
+						   ->values(array($login, $pass, $email, $fname, $lname, $token, 0, $last_seen));
 			$insertId = $insertStatement->execute(false);
 			$this->mail->sendMail($email, "Please, folow this link to confirm your account: http://localhost:8080/auth/confirmRegistration?email=" . $email . "&token=" . $token, "Registration");
 			return json_encode(true);
@@ -151,9 +151,9 @@ class AuthController extends Controller
 			$exec = $updateStatement->execute();
 
 			//create in profiles table new user, who confirmed email, so it will use our servise for sure
-			$insertStatement = $db->insert(array('userId'))
+			$insertStatement = $db->insert(array('userId', 'fameRate'))
 						   ->into('profiles')
-						   ->values(array($fromDb['id']));
+						   ->values(array($fromDb['userId'], 1));
 			$insertId = $insertStatement->execute(false);
 			header("Location: http://localhost:3000");
 			die();
