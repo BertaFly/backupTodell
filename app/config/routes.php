@@ -13,9 +13,10 @@ $app->get('/auth/confirmResetPass', 'AuthController:confirmResetPass');
 
 $app->post('/user/isFull', 'UserController:postCheckProfileIsFull');
 $app->post('/user/getAllInfo', 'UserController:postGetAllInfo');
-$app->post('/user/getWhoLikes', 'UserController:postWhoLikesMe');
+// $app->post('/user/getWhoLikes', 'UserController:postWhoLikesMe');
 $app->post('/user/recordInfo', 'UserController:postRecordInfo');
 $app->post('/user/recordAbout', 'UserController:postRecordAbout');
+$app->post('/user/newPhoto', 'UserController:postNewPhoto');
 
 
 
