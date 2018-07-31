@@ -87,15 +87,63 @@ class UserController extends Controller
 
 	}
 
+	public function postForAbout($request, $response)
+	{
+		$userId = $request->getParam('uId');
+		$db = new Model;
+		$db = $db->connect();
+		$selectStatement = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $selectStatement->execute();
+		$fromDb = $exec->fetch();
+		$res->tags = $fromDb['tags'];
+		$res->bio = $fromDb['bio'];
+		return json_encode($res);
+	}
+
 	public function postRecordAbout($request, $response)
 	{
-		return json_encode(true);
-		
+		$userId = $request->getParam('uId');
+		$userTags = $request->getParam('tags');
+		$userBio = $request->getParam('bio');
+		$db = new Model;
+		$db = $db->connect();
+		$selectStatement = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $selectStatement->execute();
+		$fromDb = $exec->fetch();
+		$userTagsInit = $fromDb['tags'];
+
+		$sendTags = explode(' ', $userTags);
+		foreach ($sendTags as $key => $toCheck) {
+			if (strstr($userTagsInit, $toCheck) === false){
+				$tagMayAdd == "" ? $tagMayAdd = $toCheck : $tagMayAdd = $tagMayAdd . ' ' . $toCheck;
+			}
+		}
+		$userTags = $userTagsInit . ' ' . $tagMayAdd;
+		$userBio === "" ? $userBio = $fromDb['bio'] : $userBio = $userBio;
+
+		$updateStatement = $db->update(array('bio' => $userBio, 'tags' => $userTags))
+								   ->table('profiles')
+								   ->where('user', '=', $userId);
+		$exec = $updateStatement->execute();
+
+		$selectStatement = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $selectStatement->execute();
+		$fromDb = $exec->fetch();
+		$res->end = true;
+		if ($fromDb['bio'] === "")
+			$res->bio = "";
+		else
+			$res->bio = $fromDb['bio'];
+		if ($fromDb['tags'] === "")
+			$res->tags = "";
+		else
+			$res->tags = $fromDb['tags'];
+		return json_encode($res);
 	}
 
 	public function postNewPhoto($request, $response)
 	{
-		$userId = $request->getParam('userId');		
+		$userId = $request->getParam('userId');
 		//check if no more 5 photo
 		$db = new Model;
 		$db = $db->connect();
@@ -136,6 +184,70 @@ class UserController extends Controller
 			$result->userPhoto = $photos;
 			return json_encode($result);
 		}
+			// return json_encode($result);
+
 		return json_encode(false);
+	}
+
+	public function postDelPhoto($request, $response)
+	{
+		$target = $request->getParam('pic');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->delete()->from('photos')->where('src', '=', $target);
+		$exec = $sql->execute();
+		//check if avatar and erise this cell in table
+		$sql = $db->select()->from('profiles')->where('profilePic', '=', $target);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		if (count($fromDb))
+		{
+			$sql = $db->delete()->from('profiles')->where('profilePic', '=', $target);
+			$exec = $sql->execute();
+		}
+		//return new array pics to re render on front
+		$sql = $db->select()->from('photos')->where('userNbr', '=', $request->getParam('userId'));
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		$photos = array();
+		foreach ($fromDb as $key => $photo) {
+			array_push($photos, $photo['src']);
+		}
+		$result->userPhoto = $photos;
+		return json_encode($result);
+	}
+
+	public function postSetAvatar($request, $response)
+	{
+		$ava = $request->getParam('ava');
+		$userId = $request->getParam('userId');
+		$db = new Model;
+		$db = $db->connect();
+		$updateStatement = $db->update(array('profilePic' => $ava))
+								   ->table('profiles')
+								   ->where('user', '=', $userId);
+		$exec = $updateStatement->execute();
+		return json_encode(true);
+	}
+	public function postDellTag($request, $response)
+	{
+		$userId = $request->getParam('uId');
+		$tagToDel = $request->getParam('what');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		$allTags = explode(' ', $fromDb['tags']);
+		if (($key = array_search($tagToDel, $allTags)) !== false) {
+			unset($allTags[$key]);
+		}
+		$allTagsFinal = implode(' ', $allTags);
+		$updateStatement = $db->update(array('tags' => $allTagsFinal))
+								   ->table('profiles')
+								   ->where('user', '=', $userId);
+		$exec = $updateStatement->execute();
+		$res->tags = $allTagsFinal;
+		return json_encode($res);
 	}
 }
