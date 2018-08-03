@@ -37,7 +37,16 @@ class UserController extends Controller
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
 		$result->userData = $fromDb;
+		$result->whoLikesUser = $this->whoLikesMe($userId);
 
+		return json_encode($result);
+	}
+
+	public function postGetAllPhoto($request, $response)
+	{
+		$userId = $request->getParam('userId');
+		$db = new Model;
+		$db = $db->connect();
 		$sql = $db->select()->from('photos')->where('userNbr', '=', $userId);
 		$sql = $sql->orderBy('whenAdd', 'DESC');
 		$exec = $sql->execute();
@@ -47,12 +56,10 @@ class UserController extends Controller
 			array_push($photos, $photo['src']);
 		}
 		$result->userPhoto = $photos;
-		$result->whoLikesUser = $this->postWhoLikesMe($userId);
-
 		return json_encode($result);
 	}
 
-	public function postWhoLikesMe($userId)
+	public function whoLikesMe($userId)
 	{
 		$db = new Model;
 		$db = $db->connect();
@@ -83,8 +90,133 @@ class UserController extends Controller
 
 	public function postRecordInfo($request, $response)
 	{
-		return json_encode(true);
+		$userId = $request->getParam('uId');
+		$login = $request->getParam('login');
+		$pass = $request->getParam('pass');
+		$fname = ucfirst(strtolower(($request->getParam('fname'))));
+		$lname = ucfirst(strtolower(($request->getParam('lname'))));
+		$email = $request->getParam('email');
+		$age = $request->getParam('age');
+		$sex = $request->getParam('sex');
+		$sexPref = $request->getParam('sexPref');
+		
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $userId);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
 
+		$res->allResFromDb = $fromDb['login'];
+
+		if ($login != '')
+		{
+			$login = htmlspecialchars($login);
+			$wrongLogin = (strlen($login) <= 4 || strlen($login) >= 120);
+			if ($wrongLogin)
+			{
+				$res->eLogin = 'New login should be longer than 4 chars and shorter than 120';
+				$login = $fromDb['login'];
+			}
+		} else {
+			$login = $fromDb['login'];
+		}
+		// $res->login = $login;
+
+		if ($pass != '')
+		{
+			$pass = htmlspecialchars($pass);
+			$wrongPass = (strlen($pass) <= 6 || strlen($pass) >= 120 || preg_match("(.*[A-Z].*)", $request->getParam('pass')) == false || password_verify($request->getParam('pass'), $fromDb['password']));
+			if ($pass)
+			{
+				$res->ePass = 'New password should be longer than 6 chars and shorter than 120, have at least 1 uppercase letter and differ from old one';
+				$pass = $fromDb['password'];
+			}
+			else
+				$pass = password_hash($pass, PASSWORD_DEFAULT);
+		} else {
+			$pass = $fromDb['password'];
+		}
+
+		// $res->pass = $pass;
+
+		if ($email != '')
+		{
+			if (strlen($email) >= 120)
+			{
+				$res->eEmail = 'Email should not be empty or longer than 120 chars';
+				$email = $fromDb['email'];
+			}
+		} else {
+			$email = $fromDb['email'];
+		}
+
+		if ($fname != '') {
+			$wrongFname = (strlen($fname) <= 1 || strlen($fname) >= 120 || !ctype_alpha($fname));
+			if ($wrongFname)
+			{
+				$res->eFname = 'First name should consists at least 2 chars, be less than 120 and can contain only english letters';
+				$fname = $fromDb['fname'];
+			}
+		} else {
+			$fname = $fromDb['fname'];
+		}
+		// $res->fname = $fname;
+		
+		if ($lname != '') {
+			$wrongLname = (strlen($lname) <= 1 || strlen($lname) >= 120 || !ctype_alpha($lname));
+			if ($wrongLname)
+			{
+				$res->eLname = 'Last name should consists at least 2 chars, be less than 120 and can contain only english letters';
+				$fname = $fromDb['lname'];
+			}
+		} else {
+			$lname = $fromDb['lname'];
+		}
+		// $res->lname = $lname;
+
+		if ($age != '')
+		{
+			$birthDate = explode("-", $age);
+			$age = (date("md", date("U", mktime(0, 0, 0, $birthDate[2], $birthDate[1], $birthDate[0]))) > date("md")
+				? ((date("Y") - $birthDate[0]) - 1)
+				: (date("Y") - $birthDate[0]));
+			if ($age < 18 || $age > 120)
+				$res->eAge = "Oups, you can not be younger than 18 or so old";
+		} else {
+			$age = $fromDb['age'];
+		}
+		// $res->age = $age;
+
+		if ($sex == '')
+			$sex = $fromDb['sex'];
+		// $res->sex = $sex;
+
+		if ($sexPref == '')
+			$sexPref = $fromDb['sexPref'];
+		// $res->sexPref = $sexPref;
+
+		$updateStatement = $db->update(array('login' => $login, 'password' => $pass, 'email' => $email, 'fname' => $fname, 'lname' => $lname))
+						   ->table('users')
+						   ->where('userId', '=', $userId);
+		$updateStatement->execute();
+		$updateStatement = $db->update(array('age' => $age, 'sex' => $sex, 'sexPref' => $sexPref, 'fameRate' => 99))->table('profiles')->where('user', '=', $userId);
+		$updateStatement->execute();
+		$sql = $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $userId);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		foreach ($fromDb as $key => $value) {
+			if ($value == '')
+				$isFull = 0;
+			else
+				$isFull = 1;
+		}
+		$updateStatement = $db->update(array('isFull' => $isFull))
+						   ->table('profiles')
+						   ->where('user', '=', $userId);
+		$updateStatement->execute();
+		$res->profileIsFull = $isFull;
+		$res->newData = $fromDb;
+		return json_encode($res);
 	}
 
 	public function postForAbout($request, $response)
@@ -111,14 +243,26 @@ class UserController extends Controller
 		$exec = $selectStatement->execute();
 		$fromDb = $exec->fetch();
 		$userTagsInit = $fromDb['tags'];
-
+		$colTagDb = explode(' ', $fromDb['tags']);
 		$sendTags = explode(' ', $userTags);
-		foreach ($sendTags as $key => $toCheck) {
-			if (strstr($userTagsInit, $toCheck) === false){
-				$tagMayAdd == "" ? $tagMayAdd = $toCheck : $tagMayAdd = $tagMayAdd . ' ' . $toCheck;
+		$colForRecord = 50 - count($colTagDb);
+		if(count($colTagDb) < 50)
+		{
+			foreach ($sendTags as $key => $toCheck) {
+				if ($key > $colForRecord)
+					break ;
+				$toCheck = preg_replace('/[^\w#& ]/', '', $toCheck);
+				if (strstr($userTagsInit, $toCheck) === false && strstr($tagMayAdd, $toCheck) === false){
+					$tagMayAdd == "" ? $tagMayAdd = $toCheck : $tagMayAdd = $tagMayAdd . ' ' . $toCheck;
+				}
 			}
+			$tagMayAdd == '' ? $userTags = $userTagsInit : $userTags = $userTagsInit . ' ' . $tagMayAdd;
 		}
-		$userTags = $userTagsInit . ' ' . $tagMayAdd;
+		else
+		{
+			$userTags = $userTagsInit;
+			$res->err = "Would you be so kind be less specific. You may add up to 50 tags";
+		}
 		$userBio === "" ? $userBio = $fromDb['bio'] : $userBio = $userBio;
 
 		$updateStatement = $db->update(array('bio' => $userBio, 'tags' => $userTags))
@@ -227,8 +371,10 @@ class UserController extends Controller
 								   ->table('profiles')
 								   ->where('user', '=', $userId);
 		$exec = $updateStatement->execute();
-		return json_encode(true);
+		$res->src = $ava;
+		return json_encode($res);
 	}
+
 	public function postDellTag($request, $response)
 	{
 		$userId = $request->getParam('uId');
@@ -249,5 +395,21 @@ class UserController extends Controller
 		$exec = $updateStatement->execute();
 		$res->tags = $allTagsFinal;
 		return json_encode($res);
+	}
+
+	public function postLocation($request, $response)
+	{
+		$userId = $request->getParam('uId');
+		$request->getParam('longAllow') == '' ? $long = $request->getParam('longDen') : $long = $request->getParam('longAllow');
+		$request->getParam('latAllow') == '' ? $lat = $request->getParam('latDen') : $long = $request->getParam('latAllow');
+		$city = $request->getParam('city');
+		$country = $request->getParam('country');
+		$db = new Model;
+		$db = $db->connect();
+		$updateStatement = $db->update(array('longetude' => $long, 'latitude' => $lat, 'city' => $city, 'country' => $country))
+								   ->table('profiles')
+								   ->where('user', '=', $userId);
+		$exec = $updateStatement->execute();
+		return json_encode(true);
 	}
 }

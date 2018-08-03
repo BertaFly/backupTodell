@@ -13,6 +13,8 @@ $app->get('/auth/confirmResetPass', 'AuthController:confirmResetPass');
 
 $app->post('/user/isFull', 'UserController:postCheckProfileIsFull');
 $app->post('/user/getAllInfo', 'UserController:postGetAllInfo');
+$app->post('/user/getAllPhoto', 'UserController:postGetAllPhoto');
+
 // $app->post('/user/getWhoLikes', 'UserController:postWhoLikesMe');
 $app->post('/user/recordInfo', 'UserController:postRecordInfo');
 $app->post('/user/recordAbout', 'UserController:postRecordAbout');
@@ -21,6 +23,7 @@ $app->post('/user/delMyPic', 'UserController:postDelPhoto');
 $app->post('/user/setAvatar', 'UserController:postSetAvatar');
 $app->post('/user/getAbout', 'UserController:postForAbout');
 $app->post('/user/dellTag', 'UserController:postDellTag');
+$app->post('/user/pushCoord', 'UserController:postLocation');
 
 
 
