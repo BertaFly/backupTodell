@@ -396,20 +396,55 @@ class UserController extends Controller
 		$res->tags = $allTagsFinal;
 		return json_encode($res);
 	}
+	public function postReturnCoord($request, $response)
+	{
+		$userId = $request->getParam('uId');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		$res->latAllow = $fromDb['latitude'];
+		$res->lngAllow = $fromDb['longetude'];
+		return json_encode($res);
+	}
 
 	public function postLocation($request, $response)
 	{
 		$userId = $request->getParam('uId');
-		$request->getParam('longAllow') == '' ? $long = $request->getParam('longDen') : $long = $request->getParam('longAllow');
-		$request->getParam('latAllow') == '' ? $lat = $request->getParam('latDen') : $long = $request->getParam('latAllow');
+		$long1 = $request->getParam('longAllow');
+		$long2 = $request->getParam('longDen');
+		$lat1 = $request->getParam('latAllow');
+		$lat2 = $request->getParam('latDen');
 		$city = $request->getParam('city');
 		$country = $request->getParam('country');
 		$db = new Model;
 		$db = $db->connect();
-		$updateStatement = $db->update(array('longetude' => $long, 'latitude' => $lat, 'city' => $city, 'country' => $country))
+		if ($long1 && $lat1)
+		{
+			$updateStatement = $db->update(array('longetude' => floatval($long1), 'latitude' => floatval($lat1)))->table('profiles')->where('user', '=', $userId);
+			$exec = $updateStatement->execute();
+			$res->latAllow = $lat1;
+			$res->lngAllow = $long1;
+		}
+		if ($city && $country)
+		{
+			$updateStatement = $db->update(array('city' => $city, 'country' => $country))
 								   ->table('profiles')
 								   ->where('user', '=', $userId);
-		$exec = $updateStatement->execute();
-		return json_encode(true);
+			$exec = $updateStatement->execute();
+		}
+		if ($long2 && $lat2)
+		{
+			$selectStatement = $db->select()->from('profiles')->where('user', '=', $userId);
+			$exec = $selectStatement->execute();
+			$fromDb = $exec->fetch();
+			if ($fromDb['longetude'] == null || $fromDb['longetude'] == 0)
+			{
+				$updateStatement = $db->update(array('longetude' => floatval($long2), 'latitude' => floatval($lat2)))->table('profiles')->where('user', '=', $userId);
+				$exec = $updateStatement->execute();
+			}
+		}
+		return json_encode($res);
 	}
 }

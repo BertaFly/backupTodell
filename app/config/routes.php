@@ -24,6 +24,8 @@ $app->post('/user/setAvatar', 'UserController:postSetAvatar');
 $app->post('/user/getAbout', 'UserController:postForAbout');
 $app->post('/user/dellTag', 'UserController:postDellTag');
 $app->post('/user/pushCoord', 'UserController:postLocation');
+$app->post('/user/getCoord', 'UserController:postReturnCoord');
+
 
 
 
