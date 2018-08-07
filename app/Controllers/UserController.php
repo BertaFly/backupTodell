@@ -38,7 +38,7 @@ class UserController extends Controller
 		$fromDb = $exec->fetch();
 		$result->userData = $fromDb;
 		$result->whoLikesUser = $this->whoLikesMe($userId);
-
+		$result->whoViewedUser = $this->whoViewedMe($userId);
 		return json_encode($result);
 	}
 
@@ -57,6 +57,65 @@ class UserController extends Controller
 		}
 		$result->userPhoto = $photos;
 		return json_encode($result);
+	}
+
+	public function whoViewedMe($userId)
+	{
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('views')->join('users', 'users.userId', '=', 'views.whoView')->join('profiles', 'views.whoView', '=', 'profiles.user')->where('target', '=', $userId);
+		$exec = $sql->execute();
+		$forSearch = $exec->fetchAll();
+
+		$sql2 = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec2 = $sql2->execute();
+		$myData = $exec2->fetch();
+
+		$sql3 = $db->select()->from('blocks')->where('whoBlock', '=', $userId);
+		$exec3 = $sql3->execute();
+		$myBlocks = $exec3->fetchAll();
+
+		$viewMe;
+		$i = 0;
+		foreach ($forSearch as $key => $value) {
+			if ($myData['sexPref'] == 'homo')
+			{
+				if (($myData['sex'] == $value['sex'] && $value['sexPref'] == 'homo') || $value['sexPref'] == 'bi')
+				{
+					foreach ($myBlocks as $block) {
+						if ($block['target'] !== $value['userId'])
+						{
+							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+							$i++;
+						}
+					}
+				}
+			}
+			else if ($myData['sexPref'] == 'hetero')
+			{
+				if (($myData['sex'] != $value['sex'] && $value['sexPref'] == 'hetero') || $value['sexPref'] == 'bi')
+				{
+					foreach ($myBlocks as $block){
+						if ($block['target'] !== $value['userId'])
+						{
+							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+							$i++;
+						}
+					}
+				}
+			}
+			else
+			{
+				foreach ($myBlocks as $block){
+					if ($block['target'] !== $value['userId'])
+					{
+						$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+							$i++;
+					}
+				}
+			}
+		}
+		return $viewMe;
 	}
 
 	public function whoLikesMe($userId)
@@ -199,13 +258,13 @@ class UserController extends Controller
 						   ->table('users')
 						   ->where('userId', '=', $userId);
 		$updateStatement->execute();
-		$updateStatement = $db->update(array('age' => $age, 'sex' => $sex, 'sexPref' => $sexPref, 'fameRate' => 99))->table('profiles')->where('user', '=', $userId);
+		$updateStatement = $db->update(array('age' => $age, 'sex' => $sex, 'sexPref' => $sexPref))->table('profiles')->where('user', '=', $userId);
 		$updateStatement->execute();
 		$sql = $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $userId);
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
 		foreach ($fromDb as $key => $value) {
-			if ($value == '')
+			if ($value == '' && $key != 'showMe' && $key != 'isOnline')
 				$isFull = 0;
 			else
 				$isFull = 1;
@@ -404,8 +463,9 @@ class UserController extends Controller
 		$sql = $db->select()->from('profiles')->where('user', '=', $userId);
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
-		$res->latAllow = $fromDb['latitude'];
-		$res->lngAllow = $fromDb['longetude'];
+		$res->latStart = $fromDb['latitude'];
+		$res->lngStart = $fromDb['longetude'];
+		$res->show = boolval($fromDb['showMe']);
 		return json_encode($res);
 	}
 
@@ -416,8 +476,7 @@ class UserController extends Controller
 		$long2 = $request->getParam('longDen');
 		$lat1 = $request->getParam('latAllow');
 		$lat2 = $request->getParam('latDen');
-		$city = $request->getParam('city');
-		$country = $request->getParam('country');
+		$show = $request->getParam('showMe');
 		$db = new Model;
 		$db = $db->connect();
 		if ($long1 && $lat1)
@@ -426,13 +485,6 @@ class UserController extends Controller
 			$exec = $updateStatement->execute();
 			$res->latAllow = $lat1;
 			$res->lngAllow = $long1;
-		}
-		if ($city && $country)
-		{
-			$updateStatement = $db->update(array('city' => $city, 'country' => $country))
-								   ->table('profiles')
-								   ->where('user', '=', $userId);
-			$exec = $updateStatement->execute();
 		}
 		if ($long2 && $lat2)
 		{
@@ -444,6 +496,13 @@ class UserController extends Controller
 				$updateStatement = $db->update(array('longetude' => floatval($long2), 'latitude' => floatval($lat2)))->table('profiles')->where('user', '=', $userId);
 				$exec = $updateStatement->execute();
 			}
+			$res->latDen = $lat2;
+			$res->lngDen = $long2;
+		}
+		if ($show !== '' && $show !== undefined && $show !== null)
+		{
+			$updateStatement = $db->update(array('showMe' => $show))->table('profiles')->where('user', '=', $userId);
+			$exec = $updateStatement->execute();
 		}
 		return json_encode($res);
 	}
