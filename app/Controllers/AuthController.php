@@ -155,9 +155,9 @@ class AuthController extends Controller
 
 			//create in profiles table new user, who confirmed email, so it will use our servise for sure
 			$response = json_decode(file_get_contents('http://ip-api.com/json'), true);
-			$insertStatement = $db->insert(array('user', 'fameRate', 'longetude', 'latitude'))
+			$insertStatement = $db->insert(array('user', 'longetude', 'latitude'))
 						   ->into('profiles')
-						   ->values(array($fromDb['userId'], 50, $response['lon'], $response['lat']));
+						   ->values(array($fromDb['userId'], $response['lon'], $response['lat']));
 			$insertId = $insertStatement->execute(false);
 			header("Location: http://localhost:3000");
 			die();

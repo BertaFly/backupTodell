@@ -23,10 +23,11 @@ $app->post('/user/newPhoto', 'UserController:postNewPhoto');
 $app->post('/user/delMyPic', 'UserController:postDelPhoto');
 $app->post('/user/setAvatar', 'UserController:postSetAvatar');
 $app->post('/user/getAbout', 'UserController:postForAbout');
+$app->post('/user/getWhoViewMe', 'UserController:postWhoViewMe');
 $app->post('/user/dellTag', 'UserController:postDellTag');
 $app->post('/user/pushCoord', 'UserController:postLocation');
 $app->post('/user/getCoord', 'UserController:postReturnCoord');
-
+$app->post('/user/getGuestInfo', 'UserController:postReturnGuestInfo');
 
 
 

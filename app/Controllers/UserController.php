@@ -38,7 +38,6 @@ class UserController extends Controller
 		$fromDb = $exec->fetch();
 		$result->userData = $fromDb;
 		$result->whoLikesUser = $this->whoLikesMe($userId);
-		$result->whoViewedUser = $this->whoViewedMe($userId);
 		return json_encode($result);
 	}
 
@@ -59,8 +58,9 @@ class UserController extends Controller
 		return json_encode($result);
 	}
 
-	public function whoViewedMe($userId)
+	public function postWhoViewMe($request, $response)
 	{
+		$userId = $request->getParam('uId');
 		$db = new Model;
 		$db = $db->connect();
 		$sql = $db->select()->from('views')->join('users', 'users.userId', '=', 'views.whoView')->join('profiles', 'views.whoView', '=', 'profiles.user')->where('target', '=', $userId);
@@ -85,7 +85,7 @@ class UserController extends Controller
 					foreach ($myBlocks as $block) {
 						if ($block['target'] !== $value['userId'])
 						{
-							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
 							$i++;
 						}
 					}
@@ -98,7 +98,7 @@ class UserController extends Controller
 					foreach ($myBlocks as $block){
 						if ($block['target'] !== $value['userId'])
 						{
-							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
 							$i++;
 						}
 					}
@@ -109,13 +109,14 @@ class UserController extends Controller
 				foreach ($myBlocks as $block){
 					if ($block['target'] !== $value['userId'])
 					{
-						$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
+						$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
 							$i++;
 					}
 				}
 			}
 		}
-		return $viewMe;
+		$res->views = $viewMe;
+		return json_encode($res);
 	}
 
 	public function whoLikesMe($userId)
@@ -455,6 +456,7 @@ class UserController extends Controller
 		$res->tags = $allTagsFinal;
 		return json_encode($res);
 	}
+
 	public function postReturnCoord($request, $response)
 	{
 		$userId = $request->getParam('uId');
@@ -505,5 +507,74 @@ class UserController extends Controller
 			$exec = $updateStatement->execute();
 		}
 		return json_encode($res);
+	}
+
+	public function updateRate($arr)
+	{
+		$db = new Model;
+		$db = $db->connect();
+		if ($arr['why'] == 'view')
+		{
+			$selectView = $db->select(array('COUNT(*)'))->from('view')->where('target', '=', $arr['target']);
+			$selectView->execute();
+			$colViewDb = $selectView->fetchColumn();
+			$colViewDb > 10 ? $colView = 10 : $colView = $colViewDb;
+		}
+		if ($arr['why'] == 'like')
+		{
+			$selectLike = $db->select(array('COUNT(*)'))->from('likes')->where('target', '=', $arr['target']);
+			$selectLike->execute();
+			$colLikeDb = $selectLike->fetchColumn();
+			$colLikeDb > 10 ? $colLike = 10 : $colLike = $colLikeDb;			
+		}
+		if ($arr['why'] == 'match')
+		{
+			$selectMatch = $db->select(array('COUNT(*)'))->from('matches')->where('partner1', '=', $arr['target'])->orWhere('partner2', '=', $arr['target']);
+			$selectMatch->execute();
+			$colMatchDb = $selectMatch->fetchColumn();
+			$colMatchDb > 20 ? $colMatch = 20 : $colMatch = $colMatchDb;
+		}
+		//general formula
+		//Famerate is plane sum views, likes, matches. 1 star values 10 points. by default you have 1 star. max you may have 5 stars(points can be more, it is sum stored in famerate). view max number 10, it is equval 100%, like same, match max number 20. you may have more then this quantaty but it still will give you up to 100%. count percentage for each category which influense your fame reting, find medium number, multiply by 40 + default 10 points devide on 5 and get stars quantety.
+		$stars = ceil(round((((($colView * 10 + $colLike * 10 + ($colMatch * 10 / 2)) / 300) * 40 + 10) / 10), 1, PHP_ROUND_HALF_UP) / 0.5) * 0.5;
+		$fameRate = $colViewDb + $colLikeDb + $colMatchDb;
+		$updateStatement = $db->update(array('fameRate' => $fameRate, 'stars' => $stars))->table('profiles')->where('user', '=', $arr['target']);
+		$updateStatement->execute();
+		return true;
+	}
+
+	public function postReturnGuestInfo($request, $response)
+	{
+		$userId = $request->getParam('uId');
+		$who = $request->getParam('who');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('photos')->where('userNbr', '=', $userId);
+		$sql = $sql->orderBy('whenAdd', 'DESC');
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		$photos = array();
+		foreach ($fromDb as $key => $photo) {
+			array_push($photos, $photo['src']);
+		}
+		$result->userPhoto = $photos;
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d G:i:s');
+		$insertStatement = $db->insert(array('whoView', 'target', 'whenView'))
+						   ->into('views')
+						   ->values(array($who, $userId, $date));
+		$insertView = $insertStatement->execute(false);
+
+		$arrForUpdate = array('target' => $userId, 'why' => 'view');
+		$updatedRate = $this->updateRate($arrForUpdate);
+
+		$sql2= $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $userId);
+		$exec = $sql->execute();
+		$forSearch = $exec->fetch();
+		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'fameRate' => $forSearch['fameRate'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen']);
+		$result->userData = $userData;
+		//update table views, change targets fame rate
+		return json_encode($result);
 	}
 }
