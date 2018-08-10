@@ -509,47 +509,45 @@ class UserController extends Controller
 		return json_encode($res);
 	}
 
-	public function updateRate($arr)
+	public function updateRate($target)
 	{
 		$db = new Model;
 		$db = $db->connect();
-		if ($arr['why'] == 'view')
-		{
-			$selectView = $db->select(array('COUNT(*)'))->from('view')->where('target', '=', $arr['target']);
-			$selectView->execute();
-			$colViewDb = $selectView->fetchColumn();
+
+			$selectView = $db->select()->from('views')->where('target', '=', $target);
+			$selectView = $selectView->execute();
+			$colViewDb = count($selectView->fetchAll());
 			$colViewDb > 10 ? $colView = 10 : $colView = $colViewDb;
-		}
-		if ($arr['why'] == 'like')
-		{
-			$selectLike = $db->select(array('COUNT(*)'))->from('likes')->where('target', '=', $arr['target']);
-			$selectLike->execute();
-			$colLikeDb = $selectLike->fetchColumn();
-			$colLikeDb > 10 ? $colLike = 10 : $colLike = $colLikeDb;			
-		}
-		if ($arr['why'] == 'match')
-		{
-			$selectMatch = $db->select(array('COUNT(*)'))->from('matches')->where('partner1', '=', $arr['target'])->orWhere('partner2', '=', $arr['target']);
-			$selectMatch->execute();
-			$colMatchDb = $selectMatch->fetchColumn();
-			$colMatchDb > 20 ? $colMatch = 20 : $colMatch = $colMatchDb;
-		}
+
+			$selectLike = $db->select()->from('likes')->where('target', '=', $target);
+			$selectLike = $selectLike->execute();
+			$colLikeDb = count($selectLike->fetchAll());
+			$colLikeDb > 10 ? $colLike = 10 : $colLike = $colLikeDb;
+
+			$selectMatch = $db->select()->from('matches')->where('partner1', '=', $target)->orWhere('partner2', '=', $target);
+			$selectMatch = $selectMatch->execute();
+			$colMatchDb = count($selectMatch->fetchAll());
+			$colMatchDb > 10 ? $colMatch = 10 : $colMatch = $colMatchDb;
 		//general formula
 		//Famerate is plane sum views, likes, matches. 1 star values 10 points. by default you have 1 star. max you may have 5 stars(points can be more, it is sum stored in famerate). view max number 10, it is equval 100%, like same, match max number 20. you may have more then this quantaty but it still will give you up to 100%. count percentage for each category which influense your fame reting, find medium number, multiply by 40 + default 10 points devide on 5 and get stars quantety.
-		$stars = ceil(round((((($colView * 10 + $colLike * 10 + ($colMatch * 10 / 2)) / 300) * 40 + 10) / 10), 1, PHP_ROUND_HALF_UP) / 0.5) * 0.5;
-		$fameRate = $colViewDb + $colLikeDb + $colMatchDb;
-		$updateStatement = $db->update(array('fameRate' => $fameRate, 'stars' => $stars))->table('profiles')->where('user', '=', $arr['target']);
+		$stars1 = ((($colView * 10 + $colLike * 10 + ($colMatch * 10 * 2)) / 300) * 40 + 10) / 10;0;
+		$stars2 = round($stars1, 1, PHP_ROUND_HALF_UP);
+		$stars = (ceil($stars2 / 0.5) * 0.5);
+		$fameRate = $colViewDb + $colLikeDb + ($colMatchDb * 2) + 10;
+		$updateStatement = $db->update(array('fameRate' => $fameRate, 'stars' => $stars))
+                           ->table('profiles')
+                           ->where('user', '=', $arr['target']);
 		$updateStatement->execute();
-		return true;
+		return array('stars' => $stars1 . ' ' . $stars2 . ' ' . $stars, 'fameRate'=>$fameRate);
 	}
 
 	public function postReturnGuestInfo($request, $response)
 	{
 		$userId = $request->getParam('uId');
-		$who = $request->getParam('who');
+		$target = $request->getParam('target');
 		$db = new Model;
 		$db = $db->connect();
-		$sql = $db->select()->from('photos')->where('userNbr', '=', $userId);
+		$sql = $db->select()->from('photos')->where('userNbr', '=', $target);
 		$sql = $sql->orderBy('whenAdd', 'DESC');
 		$exec = $sql->execute();
 		$fromDb = $exec->fetchAll();
@@ -559,22 +557,26 @@ class UserController extends Controller
 		}
 		$result->userPhoto = $photos;
 
-		date_default_timezone_set ('Europe/Kiev');
-		$date = date('Y-m-d G:i:s');
-		$insertStatement = $db->insert(array('whoView', 'target', 'whenView'))
-						   ->into('views')
-						   ->values(array($who, $userId, $date));
-		$insertView = $insertStatement->execute(false);
+		$sql2 = $db->select()->from('views')->where('whoView', '=', $userId, 'AND', 'target', '=', $target);
+		$exec2 = $sql2->execute();
+		$fromDb2 = $exec2->fetchAll();
 
-		$arrForUpdate = array('target' => $userId, 'why' => 'view');
-		$updatedRate = $this->updateRate($arrForUpdate);
-
-		$sql2= $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $userId);
-		$exec = $sql->execute();
-		$forSearch = $exec->fetch();
-		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'fameRate' => $forSearch['fameRate'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen']);
-		$result->userData = $userData;
 		//update table views, change targets fame rate
+		if (count($fromDb2) == 0){
+			date_default_timezone_set ('Europe/Kiev');
+			$date = date('Y-m-d G:i:s');
+			$insertStatement = $db->insert(array('whoView', 'target', 'whenView'))
+							   ->into('views')
+							   ->values(array($userId, $target, $date));
+			$insertView = $insertStatement->execute(false);
+			$updatedRate = $this->updateRate($target);
+		}
+
+		$sql3= $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $target);
+		$exec3 = $sql3->execute();
+		$forSearch = $exec3->fetch();
+		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen'], 'bio' => $forSearch['bio'], 'tags' => $forSearch['tags'], 'stars' => $forSearch['stars']);
+		$result->userData = $userData;
 		return json_encode($result);
 	}
 }
