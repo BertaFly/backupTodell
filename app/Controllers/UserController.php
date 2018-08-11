@@ -579,4 +579,36 @@ class UserController extends Controller
 		$result->userData = $userData;
 		return json_encode($result);
 	}
+
+	public function postLike($request, $response)
+	{
+		$id = $request->getParam('uId');
+		$target = $request->getParam('target');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('likes')->where('who', '=', $id, 'AND', 'targer', '=', $target);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		if (count($fromDb) == 0)
+		{
+			date_default_timezone_set ('Europe/Kiev');
+			$date = date('Y-m-d G:i:s');
+			$sql = $db->insert(array('who', 'target', 'whenLike'))
+						   ->into('likes')
+						   ->values(array($id, $target, $date));
+			$sql->execute(false);
+			$updatedRate = $this->updateRate($target);
+			$res->msg = "Added to favorite";
+			$res->check = true;
+			return json_encode($res);
+		}
+		else
+		{
+			$sql = $db->delete()->from('likes')->where('who', '=', $id, 'AND', 'target', '=', $target);
+			$updatedRate = $this->updateRate($target);
+			$res->msg = "Removed from favorite";
+			$res->check = false;
+			return json_encode($res);
+		}
+	}
 }

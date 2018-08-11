@@ -28,6 +28,7 @@ $app->post('/user/dellTag', 'UserController:postDellTag');
 $app->post('/user/pushCoord', 'UserController:postLocation');
 $app->post('/user/getCoord', 'UserController:postReturnCoord');
 $app->post('/user/getGuestInfo', 'UserController:postReturnGuestInfo');
+$app->post('/user/like', 'UserController:postLike');
 
 
 
