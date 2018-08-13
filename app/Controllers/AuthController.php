@@ -59,7 +59,7 @@ class AuthController extends Controller
 			$result->jwt = $jwt;
 			//record after login that user's last visit of our site has just happened
 			date_default_timezone_set ('Europe/Kiev');
-			$date = date('Y-m-d G:i:s');
+			$date = date('Y-m-d');
 			$updateStatement = $db->update(array('last_seen' => $date))
 					   ->table('users')
 					   ->where('userId', '=', $fromDb['userId']);

@@ -27,8 +27,10 @@ $app->post('/user/getWhoViewMe', 'UserController:postWhoViewMe');
 $app->post('/user/dellTag', 'UserController:postDellTag');
 $app->post('/user/pushCoord', 'UserController:postLocation');
 $app->post('/user/getCoord', 'UserController:postReturnCoord');
-$app->post('/user/getGuestInfo', 'UserController:postReturnGuestInfo');
+$app->post('/user/getGuestInfo', 'UserController:returnGuestInfo');
 $app->post('/user/like', 'UserController:postLike');
+$app->post('/user/block', 'UserController:postBlock');
+$app->post('/user/scammer', 'UserController:postScammer');
 
 
 

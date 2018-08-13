@@ -64,6 +64,7 @@ class UserController extends Controller
 		$db = new Model;
 		$db = $db->connect();
 		$sql = $db->select()->from('views')->join('users', 'users.userId', '=', 'views.whoView')->join('profiles', 'views.whoView', '=', 'profiles.user')->where('target', '=', $userId);
+		$sql = $sql->orderBy('whenView', 'DESC');
 		$exec = $sql->execute();
 		$forSearch = $exec->fetchAll();
 
@@ -74,48 +75,64 @@ class UserController extends Controller
 		$sql3 = $db->select()->from('blocks')->where('whoBlock', '=', $userId);
 		$exec3 = $sql3->execute();
 		$myBlocks = $exec3->fetchAll();
-
-		$viewMe;
+		$viewMe = array();
 		$i = 0;
 		foreach ($forSearch as $key => $value) {
 			if ($myData['sexPref'] == 'homo')
 			{
 				if (($myData['sex'] == $value['sex'] && $value['sexPref'] == 'homo') || $value['sexPref'] == 'bi')
 				{
-					foreach ($myBlocks as $block) {
-						if ($block['target'] !== $value['userId'])
-						{
-							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
-							$i++;
-						}
-					}
+					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+					$i++;
 				}
 			}
 			else if ($myData['sexPref'] == 'hetero')
 			{
 				if (($myData['sex'] != $value['sex'] && $value['sexPref'] == 'hetero') || $value['sexPref'] == 'bi')
 				{
-					foreach ($myBlocks as $block){
-						if ($block['target'] !== $value['userId'])
-						{
-							$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
-							$i++;
-						}
-					}
+					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+					$i++;
 				}
 			}
 			else
 			{
-				foreach ($myBlocks as $block){
-					if ($block['target'] !== $value['userId'])
+				$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+				$i++;
+			}
+		}
+		if (count($myBlocks) != 0)
+		{
+			foreach ($myBlocks as $v) {
+				foreach ($viewMe as $key => $view) {
+					if ($view['uId'] == $v['target'])
 					{
-						$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $value['isOnline'], 'lastSeen' => $value['last_seen']);
-							$i++;
+						unset($viewMe[$key]);
+						$viewMe = array_values($viewMe);
 					}
 				}
 			}
 		}
+		$sql4 = $db->select()->from('scammers');
+		$exec4 = $sql4->execute();
+		$scammers = $exec4->fetchAll();
+		if (count($scammers) != 0)
+		{
+			foreach ($scammers as $scam) {
+				foreach ($viewMe as $key => $view) {
+					if ($view['uId'] == $scam['target'])
+					{
+						unset($viewMe[$key]);
+						$viewMe = array_values($viewMe);
+					}
+				}
+			}
+		}
+
 		$res->views = $viewMe;
+		$res->fromDb = $forSearch;
+		$res->myData = $myData;
+		$res->myBlocks = $myBlocks;		
+
 		return json_encode($res);
 	}
 
@@ -123,27 +140,67 @@ class UserController extends Controller
 	{
 		$db = new Model;
 		$db = $db->connect();
-		$sql = $db->select()->from('likes')->join('users', 'users.userId', '=', 'likes.who')->join('profiles', 'users.userId', '=', 'profiles.user')->where('target', '=', $userId);
+		$sql = $db->select()->from('likes')->join('users', 'users.userId', '=', 'likes.who')->join('profiles', 'users.userId', '=', 'profiles.user')->where('target', '=', $userId)->orderBy('whenLike', 'DESC');
 		$exec = $sql->execute();
 		$fromDb = $exec->fetchAll();
-		$likesMeProfiles;
+
+		//get my data to comper my preferences
+		$sql2 = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec2 = $sql2->execute();
+		$myData = $exec2->fetch();
+
+		//get everybody this user blocked to comper and delet them from result
+		$sql3 = $db->select()->from('blocks')->where('whoBlock', '=', $userId);
+		$exec3 = $sql3->execute();
+		$myBlocks = $exec3->fetchAll();
+
+		//get all scamers to comper and delet them from result
+		$sql4 = $db->select()->from('scammers');
+		$exec4 = $sql4->execute();
+		$scammers = $exec4->fetchAll();
+
+		$likesMeProfiles = array();
+		$i = 0;
+
 		foreach ($fromDb as $key => $profile) {
-			$txt = $profile['bio'];
-			if (strlen($txt) > 200)
-			{
-				$parts = preg_split('/([\s\n\r]+)/', $txt, null, PREG_SPLIT_DELIM_CAPTURE);
-				$parts_count = count($parts);
-				$length = 0;
-				$last_part = 0;
-				for (; $last_part < $parts_count; ++$last_part)
-				{
-					$length += strlen($parts[$last_part]);
-					if ($length > 200)
-						break;
+			if ($myData['sexPref'] == 'homo') {
+				if (($myData['sex'] == $profile['sex'] && $profile['sexPref'] == 'homo') || $profile['sexPref'] == 'bi') {
+					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+					$i++;
 				}
-				$txt = implode(array_slice($parts, 0, $last_part));
+			} else if ($myData['sexPref'] == 'hetero') {
+				if (($myData['sex'] != $profile['sex'] && $profile['sexPref'] == 'hetero') || $profile['sexPref'] == 'bi') {
+					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+					$i++;
+				}
+			} else {
+				$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+				$i++;
 			}
-			$likesMeProfiles[$key] = array('profilePic' => $profile['profilePic'], 'firstName' => $profile['fname'], 'lastName' => $profile['lname'], 'about' => $txt);			
+		}
+		if (count($myBlocks) != 0)
+		{
+			foreach ($myBlocks as $v) {
+				foreach ($likesMeProfiles as $key => $like) {
+					if ($like['uId'] == $v['target'])
+					{
+						unset($likesMeProfiles[$key]);
+						$likesMeProfiles = array_values($likesMeProfiles);
+					}
+				}
+			}
+		}
+		if (count($scammers) != 0)
+		{
+			foreach ($scammers as $scam) {
+				foreach ($likesMeProfiles as $key => $like) {
+					if ($like['uId'] == $scam['target'])
+					{
+						unset($likesMeProfiles[$key]);
+						$likesMeProfiles = array_values($likesMeProfiles);
+					}
+				}
+			}
 		}
 		return $likesMeProfiles;
 	}
@@ -541,10 +598,11 @@ class UserController extends Controller
 		return array('stars' => $stars1 . ' ' . $stars2 . ' ' . $stars, 'fameRate'=>$fameRate);
 	}
 
-	public function postReturnGuestInfo($request, $response)
+	public function returnGuestInfo($request, $response)
 	{
 		$userId = $request->getParam('uId');
 		$target = $request->getParam('target');
+
 		$db = new Model;
 		$db = $db->connect();
 		$sql = $db->select()->from('photos')->where('userNbr', '=', $target);
@@ -584,9 +642,11 @@ class UserController extends Controller
 	{
 		$id = $request->getParam('uId');
 		$target = $request->getParam('target');
+
 		$db = new Model;
 		$db = $db->connect();
-		$sql = $db->select()->from('likes')->where('who', '=', $id, 'AND', 'targer', '=', $target);
+		$sql = $db->select()->from('likes')->where('who', '=', $id);
+		$sql = $sql->having('target', '=', $target);
 		$exec = $sql->execute();
 		$fromDb = $exec->fetchAll();
 		if (count($fromDb) == 0)
@@ -604,10 +664,77 @@ class UserController extends Controller
 		}
 		else
 		{
-			$sql = $db->delete()->from('likes')->where('who', '=', $id, 'AND', 'target', '=', $target);
+			$sql = $db->delete()->from('likes')->where('who', '=', $id)->where('target', '=', $target);
+			$exec = $sql->execute();
 			$updatedRate = $this->updateRate($target);
 			$res->msg = "Removed from favorite";
 			$res->check = false;
+			return json_encode($res);
+		}
+	}
+
+	public function postBlock($request, $response)
+	{
+		$id = $request->getParam('uId');
+		$target = $request->getParam('target');
+
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('blocks')->where('whoBlock', '=', $id);
+		$sql = $sql->having('target', '=', $target);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		// $res->check2 = 'who ' . $id . ' target ' . $target;
+		// $res->check3 = $fromDb;
+
+		if (count($fromDb) == 0)
+		{
+			date_default_timezone_set ('Europe/Kiev');
+			$date = date('Y-m-d G:i:s');
+			$sql = $db->insert(array('whoBlock', 'target', 'whenBlock'))
+						   ->into('blocks')
+						   ->values(array($id, $target, $date));
+			$sql->execute(false);
+			$res->msg = "You blocked this user";
+			$res->check = false;
+		}
+		else
+		{
+			$sql = $db->delete()->from('blocks')->where('whoBlock', '=', $id)->where('target', '=', $target);
+			$exec = $sql->execute();
+			$res->msg = "You unblocked this user";
+			$res->check = true;
+		}
+		return json_encode($res);
+	}
+
+	public function postScammer($request, $response)
+	{
+		$id = $request->getParam('uId');
+		$target = $request->getParam('target');
+
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('scammers')->where('whoReported', '=', $id);
+		$sql = $sql->having('target', '=', $target);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		if (count($fromDb) == 0)
+		{
+			$sql = $db->insert(array('whoReported', 'target'))
+						   ->into('scammers')
+						   ->values(array($id, $target));
+			$sql->execute(false);
+			$res->msg = "You reported this user as a scammer";
+			$res->check = false;
+			return json_encode($res);
+		}
+		else
+		{
+			$sql = $db->delete()->from('scammers')->where('whoReported', '=', $id)->where('target', '=', $target);
+			$exec = $sql->execute();
+			$res->msg = "You decline your report";
+			$res->check = true;
 			return json_encode($res);
 		}
 	}
