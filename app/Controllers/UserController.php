@@ -635,6 +635,12 @@ class UserController extends Controller
 		$forSearch = $exec3->fetch();
 		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen'], 'bio' => $forSearch['bio'], 'tags' => $forSearch['tags'], 'stars' => $forSearch['stars']);
 		$result->userData = $userData;
+		$sql4 = $db->select()->from('likes')->where('who', '=', 1)->where('target', '=', 11);
+		$exec4 = $sql4->execute();
+		$isLike = $exec4->fetch();
+		$isLike == 0 ? $result->isLike = false : $result->isLike = true;
+		//change db table and do working function
+		$result->isMatch = true;
 		return json_encode($result);
 	}
 
@@ -737,5 +743,22 @@ class UserController extends Controller
 			$res->check = true;
 			return json_encode($res);
 		}
+	}
+
+	public function postReturnBlocks($request, $response)
+	{
+		$id = $request->getParam('uId');
+
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('blocks')->join('profiles', 'blocks.target', '=', 'profiles.user')->join('users', 'profiles.user', '=', 'users.userId')->where('whoBlock', '=', $id)->orderBy('whenBlock', 'DESC');
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		$blocks = array();
+		foreach ($fromDb as $key => $block) {
+			$blocks[$key] = array('uId' => $block['userId'], 'profilePic' => $block['profilePic'], 'fname' => $block['fname'], 'lname' => $block['lname'], 'sex' => $block['sex'], 'sexPref' => $block['sexPref'], 'age' => $block['age'], 'lastSeen' => $block['last_seen'], 'isOnline' => $block['isOnline']);
+		}
+		$res->myBlocks = $blocks;
+		return json_encode($res);
 	}
 }

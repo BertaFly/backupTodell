@@ -31,6 +31,7 @@ $app->post('/user/getGuestInfo', 'UserController:returnGuestInfo');
 $app->post('/user/like', 'UserController:postLike');
 $app->post('/user/block', 'UserController:postBlock');
 $app->post('/user/scammer', 'UserController:postScammer');
+$app->post('/user/getMyBlocks', 'UserController:postReturnBlocks');
 
 
 
