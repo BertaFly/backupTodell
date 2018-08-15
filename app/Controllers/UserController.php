@@ -615,7 +615,7 @@ class UserController extends Controller
 		}
 		$result->userPhoto = $photos;
 
-		$sql2 = $db->select()->from('views')->where('whoView', '=', $userId, 'AND', 'target', '=', $target);
+		$sql2 = $db->select()->from('views')->where('whoView', '=', $userId)->where('target', '=', $target);
 		$exec2 = $sql2->execute();
 		$fromDb2 = $exec2->fetchAll();
 
@@ -635,12 +635,22 @@ class UserController extends Controller
 		$forSearch = $exec3->fetch();
 		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen'], 'bio' => $forSearch['bio'], 'tags' => $forSearch['tags'], 'stars' => $forSearch['stars']);
 		$result->userData = $userData;
-		$sql4 = $db->select()->from('likes')->where('who', '=', 1)->where('target', '=', 11);
+		$sql4 = $db->select()->from('likes')->where('who', '=', $target)->where('target', '=', $userId);
 		$exec4 = $sql4->execute();
 		$isLike = $exec4->fetch();
 		$isLike == 0 ? $result->isLike = false : $result->isLike = true;
 		//change db table and do working function
-		$result->isMatch = true;
+		$sql5 = $db->select()->from('matches')->where('partner1', '=', $userId)->orWhere('partner2', '=', $userId);
+		$exec5 = $sql5->execute();
+		$isMatch = $exec5->fetchAll();
+		$result->isMatch = false;
+		foreach ($isMatch as $key => $pair) {
+			if ($pair['partner1'] == $target || $pair['partner2'] == $target)
+			{
+				$result->isMatch = true;
+				break ;
+			}
+		}
 		return json_encode($result);
 	}
 
@@ -663,15 +673,31 @@ class UserController extends Controller
 						   ->into('likes')
 						   ->values(array($id, $target, $date));
 			$sql->execute(false);
-			$updatedRate = $this->updateRate($target);
 			$res->msg = "Added to favorite";
 			$res->check = true;
+			//check if need add to match
+			$isMatch = $db->select()->from('likes')->where('who', '=', $target)->where('target', '=', $id);
+			$exec1 = $isMatch->execute();
+			$match = $exec1->fetch();
+			if ($match != 0)
+			{
+				$matchInsert = $db->insert(array('partner1', 'partner2'))
+						   ->into('matches')
+						   ->values(array($id, $target));
+				$matchInsert->execute(false);
+			}
+			$updatedRate = $this->updateRate($target);
 			return json_encode($res);
 		}
 		else
 		{
 			$sql = $db->delete()->from('likes')->where('who', '=', $id)->where('target', '=', $target);
 			$exec = $sql->execute();
+			$matchDel = $db->delete()->from('matches')->where('partner1', '=', $id)->where('partner2', '=', $target);
+			$exec1 = $matchDel->execute();
+			$matchDel2 = $db->delete()->from('matches')->where('partner1', '=', $target)->where('partner2', '=', $id);
+			$exec2 = $matchDel2->execute();
+
 			$updatedRate = $this->updateRate($target);
 			$res->msg = "Removed from favorite";
 			$res->check = false;

@@ -53,8 +53,8 @@ class AuthController extends Controller
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
 
-		if (count($fromDb) !== 0 && password_verify($request->getParam('pass'), $fromDb['password']) && $fromDb['isEmailConfirmed'] === 1)
-		{
+		// if (count($fromDb) !== 0 && password_verify($request->getParam('pass'), $fromDb['password']) && $fromDb['isEmailConfirmed'] === 1)
+		// {
 			$jwt = $this->generateToken($login, $fromDb['userId']);
 			$result->jwt = $jwt;
 			//record after login that user's last visit of our site has just happened
@@ -69,7 +69,7 @@ class AuthController extends Controller
 						   ->where('user', '=', $fromDb['userId']);
 			$exec = $updateStatement2->execute();
 			return json_encode($result);
-		}
+		// }
 		return json_encode(false);
 	}
 
