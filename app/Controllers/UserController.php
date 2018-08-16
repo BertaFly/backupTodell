@@ -654,6 +654,18 @@ class UserController extends Controller
 		return json_encode($result);
 	}
 
+	public function getInfoForNotification($who)
+	{
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('profiles')->join('users', 'profiles.user', '=', 'users.userId')->where('user', '=', $who);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		$name = $fromDb['fname'].' '.$fromDb['lname'];
+		$result = array('fromName' => $name, 'fromPic' => $fromDb['profilePic']);
+		return $result;
+	}
+
 	public function postLike($request, $response)
 	{
 		$id = $request->getParam('uId');
@@ -685,9 +697,9 @@ class UserController extends Controller
 						   ->into('matches')
 						   ->values(array($id, $target));
 				$matchInsert->execute(false);
+				$res->match = array('partner1' => $id, 'partner2' => $target);
 			}
 			$updatedRate = $this->updateRate($target);
-			return json_encode($res);
 		}
 		else
 		{
@@ -695,14 +707,19 @@ class UserController extends Controller
 			$exec = $sql->execute();
 			$matchDel = $db->delete()->from('matches')->where('partner1', '=', $id)->where('partner2', '=', $target);
 			$exec1 = $matchDel->execute();
+			$res->removedMatch1 = $exec1;
 			$matchDel2 = $db->delete()->from('matches')->where('partner1', '=', $target)->where('partner2', '=', $id);
 			$exec2 = $matchDel2->execute();
+			$res->removedMatch2 = $exec2;
 
 			$updatedRate = $this->updateRate($target);
 			$res->msg = "Removed from favorite";
 			$res->check = false;
-			return json_encode($res);
 		}
+		$tmp = $this->getInfoForNotification($id);
+		$res->fromWhoName = $tmp['fromName'];
+		$res->fromWhoPic = $tmp['fromPic'];
+		return json_encode($res);
 	}
 
 	public function postBlock($request, $response)

@@ -17,7 +17,7 @@ class AuthController extends Controller
 		return $token;
 	}
 
-	public function generateToken($login, $id)
+	public function generateToken($login, $id, $name, $surname)
 	{
 		$expiration = time() + (15 * 60 * 1000);
 
@@ -25,7 +25,7 @@ class AuthController extends Controller
 		$header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
 
 		// Create token payload as a JSON string
-		$payload = json_encode(['userLogin' => $login, 'userId' => $id,'exp' => $expiration]);
+		$payload = json_encode(['userLogin' => $login, 'userId' => $id, 'userName' => $name, 'userSurname' => $surname, 'exp' => $expiration]);
 
 		// Encode Header to Base64Url String
 		$base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
@@ -55,7 +55,7 @@ class AuthController extends Controller
 
 		// if (count($fromDb) !== 0 && password_verify($request->getParam('pass'), $fromDb['password']) && $fromDb['isEmailConfirmed'] === 1)
 		// {
-			$jwt = $this->generateToken($login, $fromDb['userId']);
+			$jwt = $this->generateToken($login, $fromDb['userId'], $fromDb['fname'], $fromDb['lname']);
 			$result->jwt = $jwt;
 			//record after login that user's last visit of our site has just happened
 			date_default_timezone_set ('Europe/Kiev');
