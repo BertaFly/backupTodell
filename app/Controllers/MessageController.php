@@ -35,23 +35,19 @@ class MessageController extends Controller
 			$conversation[$i]['ava'] = $info['profilePic'];
 			$conversation[$i]['name'] = $info['fname'] . ' ' . $info['lname'];
 
-			$countIn = 0;
-			$countOut = 0;
-
+			$count = 0;
+			// $countOut = 0;
 			foreach ($fromDb as $msg) {
-				if ($v == $msg['sender']){
-					$conversation[$i]['in'][$countIn] = $msg['msg'] . ' ' . $msg['whenSend'];
-					$countIn++;
-				} else if ($v == $msg['receiver']){
-					$conversation[$i]['out'][$countOut] = $msg['msg'] . ' ' . $msg['whenSend'];
-					$countOut++;
-				}		
+				if ($v === $msg['sender'] || $v === $msg['receiver']) {
+					$messag[$count] = array('sender'=> $msg['sender'], 'content' => $msg['msg'], 'time' => substr($msg['whenSend'], -8, 5));
+					$count++;
+				}
 			}
+			$conversation[$i]['messagies'] = $messag;
+			unset($messag);
 		}
 		$result->data = $conversation;
-		$result->check = "vatrushka";
-
+		// $result->check = '6';
 		return json_encode($result);
-
 	}
 }

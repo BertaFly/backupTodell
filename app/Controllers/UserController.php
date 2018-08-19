@@ -804,4 +804,16 @@ class UserController extends Controller
 		$res->myBlocks = $blocks;
 		return json_encode($res);
 	}
+
+	public function postReturnMyAva($request, $response)
+	{
+		$id = $request->getParam('uId');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('profiles')->where('user', '=', $id);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		$res->fromWhoPic = $fromDb['profilePic'];
+		return json_encode($res);
+	}
 }
