@@ -33,6 +33,9 @@ $app->post('/user/block', 'UserController:postBlock');
 $app->post('/user/scammer', 'UserController:postScammer');
 $app->post('/user/getMyBlocks', 'UserController:postReturnBlocks');
 
+$app->post('/message/historyInit', 'MessageController:returnInitialHistory');
+
+
 
 
 // $app->post('/auth/signup', 'AuthController:postSignUp');
