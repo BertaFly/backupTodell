@@ -35,7 +35,12 @@ $app->post('/user/getMyBlocks', 'UserController:postReturnBlocks');
 $app->post('/user/getAva', 'UserController:postReturnMyAva');
 
 
+
 $app->post('/message/historyInit', 'MessageController:returnInitialHistory');
+$app->post('/message/send', 'MessageController:postSendMessage');
+$app->post('/message/get', 'MessageController:postGetMessage');
+
+
 
 
 
