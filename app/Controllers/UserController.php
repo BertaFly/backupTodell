@@ -816,4 +816,34 @@ class UserController extends Controller
 		$res->fromWhoPic = $fromDb['profilePic'];
 		return json_encode($res);
 	}
+
+	public function postReturnMyMatches($request, $response)
+	{
+		$id = $request->getParam('uId');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('matches')->where('partner1', '=', $id)->orWhere('partner2', '=', $id);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+
+		$uniqUser = array();
+		foreach ($fromDb as $key => $value) {
+			if ($value['partner1'] != $id && in_array($value['partner1'], $uniqUser) === false)
+				$uniqUser[$key] = $value['partner1'];
+			else if ($value['partner2'] != $id && in_array($value['partner2'], $uniqUser) === false)
+				$uniqUser[$key] = $value['partner2'];
+		}
+		$uniqUser = array_values($uniqUser);
+
+		foreach ($uniqUser as $i => $v) {
+			$match[$i]['withWho'] = $v;
+			$sql = $db->select()->from('profiles')->join('users', 'users.userId', '=', 'profiles.user')->where('user', '=', $v);
+			$exec = $sql->execute();
+			$info = $exec->fetch();
+			$match[$i]['ava'] = $info['profilePic'];
+			$match[$i]['name'] = $info['fname'] . ' ' . $info['lname'];
+		}
+		$res->myMatches = $match;
+		return json_encode($res);
+	}
 }

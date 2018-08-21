@@ -33,6 +33,7 @@ $app->post('/user/block', 'UserController:postBlock');
 $app->post('/user/scammer', 'UserController:postScammer');
 $app->post('/user/getMyBlocks', 'UserController:postReturnBlocks');
 $app->post('/user/getAva', 'UserController:postReturnMyAva');
+$app->post('/user/getMatches', 'UserController:postReturnMyMatches');
 
 
 

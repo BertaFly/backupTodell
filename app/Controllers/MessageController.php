@@ -52,6 +52,29 @@ class MessageController extends Controller
 		$fromDb1 = $exec1->fetch();
 		$result->myAva = $fromDb1['profilePic'];
 
+		$selectMatches = $db->select()->from('matches')->where('partner1', '=', $uId)->orWhere('partner2', '=', $uId);
+		$execMatches = $selectMatches->execute();
+		$fromDbMatches = $execMatches->fetchAll();
+
+		$uniqUserForMatch = array();
+		foreach ($fromDbMatches as $key => $value) {
+			if ($value['partner1'] != $uId && in_array($value['partner1'], $uniqUserForMatch) === false)
+				$uniqUserForMatch[$key] = $value['partner1'];
+			else if ($value['partner2'] != $uId && in_array($value['partner2'], $uniqUserForMatch) === false)
+				$uniqUserForMatch[$key] = $value['partner2'];
+		}
+		$uniqUserForMatch = array_values($uniqUserForMatch);
+		$match = array();
+		foreach ($uniqUserForMatch as $i => $v) {
+			$match[$i]['withWho'] = $v;
+			$sql = $db->select()->from('profiles')->join('users', 'users.userId', '=', 'profiles.user')->where('user', '=', $v);
+			$exec = $sql->execute();
+			$info = $exec->fetch();
+			$match[$i]['ava'] = $info['profilePic'];
+			$match[$i]['name'] = $info['fname'] . ' ' . $info['lname'];
+		}
+		$result->myMatches = $match;
+
 		// $result->check = '6';
 		return json_encode($result);
 	}
