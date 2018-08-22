@@ -40,8 +40,7 @@ $app->post('/user/getMatches', 'UserController:postReturnMyMatches');
 $app->post('/message/historyInit', 'MessageController:returnInitialHistory');
 $app->post('/message/send', 'MessageController:postSendMessage');
 $app->post('/message/get', 'MessageController:postGetMessage');
-
-
+$app->post('/message/markAsRead', 'MessageController:markMsgAsRead');
 
 
 

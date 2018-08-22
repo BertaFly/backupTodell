@@ -36,17 +36,31 @@ class MessageController extends Controller
 			$conversation[$i]['name'] = $info['fname'] . ' ' . $info['lname'];
 
 			$count = 0;
+			$hasUnread = 0;
+
 			// $countOut = 0;
 			foreach ($fromDb as $msg) {
 				if ($v === $msg['sender'] || $v === $msg['receiver']) {
-					$messag[$count] = array('sender'=> $msg['sender'], 'content' => $msg['msg'], 'time' => substr($msg['whenSend'], -8, 5));
+					$messag[$count] = array('sender'=> $msg['sender'], 'content' => $msg['msg'], 'time' => substr($msg['whenSend'], -8, 5), 'read' => $msg['seen']);
 					$count++;
+					if ($uId === $msg['receiver'] && $msg['seen'] === 0) {
+						$hasUnread = 1;
+					}
 				}
 			}
 			$conversation[$i]['messagies'] = $messag;
+			$conversation[$i]['hasUnread'] = $hasUnread;
 			unset($messag);
 		}
 		$result->data = $conversation;
+		$fromWhoUnread = array();
+		foreach ($conversation as $con => $val) {
+			if ($val['hasUnread'] === 1) {
+				array_push($fromWhoUnread, $val['withWho']);
+			}
+		}
+		$result->fromWhoUnread = $fromWhoUnread;
+
 		$sql1 = $db->select()->from('profiles')->where('user', '=', $uId);
 		$exec1 = $sql1->execute();
 		$fromDb1 = $exec1->fetch();
@@ -182,5 +196,18 @@ class MessageController extends Controller
 		$result->check = "sender " . $sender . " reciever " . $me;
 
 		return json_encode($result);
+	}
+
+	public function markMsgAsRead($request, $response)
+	{
+		$sender = $request->getParam('sender');
+		$me = $request->getParam('uId');
+		$db = new Model;
+		$db = $db->connect();
+		$updateStatement = $db->update(array('seen' => 1))
+                       ->table('chat')
+                       ->where('sender', '=', $sender)->where('receiver', '=', $me);
+        $affectedRows = $updateStatement->execute();
+		return json_encode(true);
 	}
 }
