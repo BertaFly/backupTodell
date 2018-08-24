@@ -66,6 +66,10 @@ $container['UserController'] = function ($container) {
 	return new \App\Controllers\UserController($container);
 };
 
+$container['MessageController'] = function ($container) {
+	return new \App\Controllers\MessageController($container);
+};
+
 // v::with('App\\Validation\\Rules\\');
 
 require __DIR__ . '/app/config/routes.php';

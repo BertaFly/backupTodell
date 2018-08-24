@@ -37,6 +37,13 @@ class UserController extends Controller
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
 		$result->userData = $fromDb;
+		//record new time of visit 
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement = $db->update(array('last_seen' => $date))
+				   ->table('users')
+				   ->where('userId', '=', $fromDb['userId']);
+		$affectedRows = $updateStatement->execute();
 		$result->whoLikesUser = $this->whoLikesMe($userId);
 		return json_encode($result);
 	}
@@ -82,7 +89,8 @@ class UserController extends Controller
 			{
 				if (($myData['sex'] == $value['sex'] && $value['sexPref'] == 'homo') || $value['sexPref'] == 'bi')
 				{
-					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+					strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $isOnline, 'lastSeen' => $value['last_seen']);
 					$i++;
 				}
 			}
@@ -90,13 +98,15 @@ class UserController extends Controller
 			{
 				if (($myData['sex'] != $value['sex'] && $value['sexPref'] == 'hetero') || $value['sexPref'] == 'bi')
 				{
-					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+					strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $isOnline, 'lastSeen' => $value['last_seen']);
 					$i++;
 				}
 			}
 			else
 			{
-				$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => boolval($value['isOnline']), 'lastSeen' => $value['last_seen']);
+				strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+				$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $isOnline, 'lastSeen' => $value['last_seen']);
 				$i++;
 			}
 		}
@@ -165,16 +175,19 @@ class UserController extends Controller
 		foreach ($fromDb as $key => $profile) {
 			if ($myData['sexPref'] == 'homo') {
 				if (($myData['sex'] == $profile['sex'] && $profile['sexPref'] == 'homo') || $profile['sexPref'] == 'bi') {
-					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+					strtotime($profile['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline= false;
+					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => $isOnline, 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
 					$i++;
 				}
 			} else if ($myData['sexPref'] == 'hetero') {
 				if (($myData['sex'] != $profile['sex'] && $profile['sexPref'] == 'hetero') || $profile['sexPref'] == 'bi') {
-					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+					strtotime($profile['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+					$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => $isOnline, 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
 					$i++;
 				}
 			} else {
-				$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => boolval($profile['isOnline']), 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
+				strtotime($profile['lastSeen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+				$likesMeProfiles[$i] = array('uId' => $profile['userId'], 'fname' => $profile['fname'], 'lname' => $profile['lname'], 'age' => $profile['age'], 'sex' => $profile['sex'], 'sexPref' => $profile['sexPref'], 'fameRate' => $profile['fameRate'], 'stars' => $profile['stars'], 'isOnline' => $isOnline, 'lastSeen' => $profile['last_seen'], 'profilePic' => $profile['profilePic']);
 				$i++;
 			}
 		}
@@ -312,7 +325,10 @@ class UserController extends Controller
 			$sexPref = $fromDb['sexPref'];
 		// $res->sexPref = $sexPref;
 
-		$updateStatement = $db->update(array('login' => $login, 'password' => $pass, 'email' => $email, 'fname' => $fname, 'lname' => $lname))
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+
+		$updateStatement = $db->update(array('login' => $login, 'password' => $pass, 'email' => $email, 'fname' => $fname, 'lname' => $lname, 'last_seen' => $date))
 						   ->table('users')
 						   ->where('userId', '=', $userId);
 		$updateStatement->execute();
@@ -680,7 +696,7 @@ class UserController extends Controller
 		if (count($fromDb) == 0)
 		{
 			date_default_timezone_set ('Europe/Kiev');
-			$date = date('Y-m-d G:i:s');
+			$date = date('Y-m-d H:i:s');
 			$sql = $db->insert(array('who', 'target', 'whenLike'))
 						   ->into('likes')
 						   ->values(array($id, $target, $date));
@@ -739,7 +755,7 @@ class UserController extends Controller
 		if (count($fromDb) == 0)
 		{
 			date_default_timezone_set ('Europe/Kiev');
-			$date = date('Y-m-d G:i:s');
+			$date = date('Y-m-d H:i:s');
 			$sql = $db->insert(array('whoBlock', 'target', 'whenBlock'))
 						   ->into('blocks')
 						   ->values(array($id, $target, $date));
@@ -799,7 +815,8 @@ class UserController extends Controller
 		$fromDb = $exec->fetchAll();
 		$blocks = array();
 		foreach ($fromDb as $key => $block) {
-			$blocks[$key] = array('uId' => $block['userId'], 'profilePic' => $block['profilePic'], 'fname' => $block['fname'], 'lname' => $block['lname'], 'sex' => $block['sex'], 'sexPref' => $block['sexPref'], 'age' => $block['age'], 'lastSeen' => $block['last_seen'], 'isOnline' => $block['isOnline']);
+			strtotime($block['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+			$blocks[$key] = array('uId' => $block['userId'], 'profilePic' => $block['profilePic'], 'fname' => $block['fname'], 'lname' => $block['lname'], 'sex' => $block['sex'], 'sexPref' => $block['sexPref'], 'age' => $block['age'], 'lastSeen' => $block['last_seen'], 'isOnline' => $isOnline);
 		}
 		$res->myBlocks = $blocks;
 		return json_encode($res);
