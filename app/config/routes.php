@@ -7,12 +7,15 @@ $app->get('/', 'HomeController:index')->setName('home');
 $app->post('/auth/signin', 'AuthController:postSignIn');
 $app->post('/auth/signup', 'AuthController:postSignUp');
 $app->post('/auth/reset', 'AuthController:postResetPass');
+$app->post('/auth/signinFB', 'AuthController:signinFB');
 
 $app->get('/auth/confirmRegistration', 'AuthController:getConfirmRegistr');
 $app->get('/auth/confirmResetPass', 'AuthController:confirmResetPass');
 $app->post('/auth/logOut', 'AuthController:postLogOut');
 
 $app->post('/user/isFull', 'UserController:postCheckProfileIsFull');
+$app->post('/user/hasAva', 'UserController:postCheckHasAvatar');
+
 $app->post('/user/getAllInfo', 'UserController:postGetAllInfo');
 $app->post('/user/getAllPhoto', 'UserController:postGetAllPhoto');
 
@@ -34,6 +37,7 @@ $app->post('/user/scammer', 'UserController:postScammer');
 $app->post('/user/getMyBlocks', 'UserController:postReturnBlocks');
 $app->post('/user/getAva', 'UserController:postReturnMyAva');
 $app->post('/user/getMatches', 'UserController:postReturnMyMatches');
+$app->post('/user/search', 'SearchController:getUsers');
 
 
 

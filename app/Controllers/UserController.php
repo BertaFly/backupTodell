@@ -6,6 +6,19 @@ use App\Mail\SendMail;
 
 class UserController extends Controller
 {
+	public function postCheckHasAvatar($request, $response)
+	{
+		$userId = $request->getParam('userId');
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetch();
+		if ($fromDb['profilePic'])
+			return json_encode(true);
+		return json_encode(false);
+	}
+
 	public function postCheckProfileIsFull($request, $response)
 	{
 		$userId = $request->getParam('userId');
@@ -28,6 +41,21 @@ class UserController extends Controller
 		}
 	}
 
+	public function getMyViews($id)
+	{
+		$db = new Model;
+		$db = $db->connect();
+		$sql = $db->select()->from('views')->join('users', 'views.target', '=', 'users.userId')->join('profiles', 'users.userId', '=', 'profiles.user')->where('whoView', '=', $id)->orderBy('whenView', 'DESC')->limit(5, 0);
+		$exec = $sql->execute();
+		$fromDb = $exec->fetchAll();
+		$res;
+		foreach ($fromDb as $key => $value) {
+			strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline = false;
+			$res[$key] = array('id' => $value['target'], 'name' => $value['fname'] . ' ' . $value['lname'], 'isOnline' => $isOnline, 'ava' => $value['profilePic']);
+		}
+		return $res;
+	}
+
 	public function postGetAllInfo($request, $response)
 	{
 		$userId = $request->getParam('userId');
@@ -37,6 +65,9 @@ class UserController extends Controller
 		$exec = $sql->execute();
 		$fromDb = $exec->fetch();
 		$result->userData = $fromDb;
+
+		$result->check = $userId;
+		
 		//record new time of visit 
 		date_default_timezone_set ('Europe/Kiev');
 		$date = date('Y-m-d H:i:s');
@@ -45,6 +76,7 @@ class UserController extends Controller
 				   ->where('userId', '=', $fromDb['userId']);
 		$affectedRows = $updateStatement->execute();
 		$result->whoLikesUser = $this->whoLikesMe($userId);
+		$result->recentViews = $this->getMyViews($userId);
 		return json_encode($result);
 	}
 
@@ -89,7 +121,7 @@ class UserController extends Controller
 			{
 				if (($myData['sex'] == $value['sex'] && $value['sexPref'] == 'homo') || $value['sexPref'] == 'bi')
 				{
-					strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+					strtotime($value['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline = false;
 					$viewMe[$i] = array('uId' => $value['userId'], 'login' => $value['login'], 'fname' => $value['fname'], 'lname' => $value['lname'], 'age' => $value['age'], 'sex' => $value['sex'], 'sexPref' => $value['sexPref'], 'fameRate' => $value['fameRate'], 'stars' => $value['stars'], 'profilePic' => $value['profilePic'], 'isOnline' => $isOnline, 'lastSeen' => $value['last_seen']);
 					$i++;
 				}
@@ -415,6 +447,12 @@ class UserController extends Controller
 			$res->tags = "";
 		else
 			$res->tags = $fromDb['tags'];
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		return json_encode($res);
 	}
 
@@ -440,7 +478,7 @@ class UserController extends Controller
 			$str = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM0123456789";
 			$str = str_shuffle($str);
 			$picName = substr($str, 0, 10);
-			$fileName = ROOT.'/userPhoto/'.$picName.'.png';
+			$fileName = 'userPhoto/'.$picName.'.png';
 			$fileNameForDb = 'http://localhost:8080/userPhoto/'.$picName.'.png';
 			//record in file
 			file_put_contents($fileName, $img);
@@ -459,10 +497,16 @@ class UserController extends Controller
 				array_push($photos, $photo['src']);
 			}
 			$result->userPhoto = $photos;
+
+			date_default_timezone_set ('Europe/Kiev');
+			$date = date('Y-m-d H:i:s');
+			$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+			$updateStatement2->execute();
+
+			$result->check = $fileName;
+
 			return json_encode($result);
 		}
-			// return json_encode($result);
-
 		return json_encode(false);
 	}
 
@@ -479,8 +523,8 @@ class UserController extends Controller
 		$fromDb = $exec->fetchAll();
 		if (count($fromDb))
 		{
-			$sql = $db->delete()->from('profiles')->where('profilePic', '=', $target);
-			$exec = $sql->execute();
+			$updateStatement1 = $db->update(array('profilePic' => null))->table('profiles')->where('profilePic', '=', $target);
+			$updateStatement1->execute();
 		}
 		//return new array pics to re render on front
 		$sql = $db->select()->from('photos')->where('userNbr', '=', $request->getParam('userId'));
@@ -491,6 +535,12 @@ class UserController extends Controller
 			array_push($photos, $photo['src']);
 		}
 		$result->userPhoto = $photos;
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		return json_encode($result);
 	}
 
@@ -505,6 +555,12 @@ class UserController extends Controller
 								   ->where('user', '=', $userId);
 		$exec = $updateStatement->execute();
 		$res->src = $ava;
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		return json_encode($res);
 	}
 
@@ -527,6 +583,12 @@ class UserController extends Controller
 								   ->where('user', '=', $userId);
 		$exec = $updateStatement->execute();
 		$res->tags = $allTagsFinal;
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		return json_encode($res);
 	}
 
@@ -541,6 +603,12 @@ class UserController extends Controller
 		$res->latStart = $fromDb['latitude'];
 		$res->lngStart = $fromDb['longetude'];
 		$res->show = boolval($fromDb['showMe']);
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		return json_encode($res);
 	}
 
@@ -552,6 +620,10 @@ class UserController extends Controller
 		$lat1 = $request->getParam('latAllow');
 		$lat2 = $request->getParam('latDen');
 		$show = $request->getParam('showMe');
+			$res->check3 = "prishlo " . $request->getParam('showMe') ." for DB " . $show;
+
+		// $res->check3 = $request->getParam('uId') . " lat alow: " . $request->getParam('latAllow') . " lon alow: " . $request->getParam('longAllow') . " lon den: " . $request->getParam('longDen') . " lon den: " . $request->getParam('latDen') . " " . $request->getParam('showMe');
+		// return json_encode($res);
 		$db = new Model;
 		$db = $db->connect();
 		if ($long1 && $lat1)
@@ -560,6 +632,7 @@ class UserController extends Controller
 			$exec = $updateStatement->execute();
 			$res->latAllow = $lat1;
 			$res->lngAllow = $long1;
+			$res->check = "nice, you got permision ";
 		}
 		if ($long2 && $lat2)
 		{
@@ -573,13 +646,20 @@ class UserController extends Controller
 			}
 			$res->latDen = $lat2;
 			$res->lngDen = $long2;
+			$res->check2 = "pirate ";
 		}
-		if ($show !== '' && $show !== undefined && $show !== null)
+		if ($show === 0 || $show === 1)
 		{
 			$updateStatement = $db->update(array('showMe' => $show))->table('profiles')->where('user', '=', $userId);
 			$exec = $updateStatement->execute();
+
 		}
-		return json_encode($res);
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+		return json_encode($res);		
 	}
 
 	public function updateRate($target)
@@ -643,13 +723,20 @@ class UserController extends Controller
 							   ->into('views')
 							   ->values(array($userId, $target, $date));
 			$insertView = $insertStatement->execute(false);
+
+			$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+			$updateStatement2->execute();
+
 			$updatedRate = $this->updateRate($target);
 		}
 
 		$sql3= $db->select()->from('users')->join('profiles', 'users.userId', '=', 'profiles.user')->where('userId', '=', $target);
 		$exec3 = $sql3->execute();
 		$forSearch = $exec3->fetch();
-		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => boolval($forSearch['isOnline']), 'lastSeen' => $forSearch['last_seen'], 'bio' => $forSearch['bio'], 'tags' => $forSearch['tags'], 'stars' => $forSearch['stars']);
+
+		strtotime($forSearch['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline = false;
+
+		$userData = array('login' => $forSearch['login'], 'fname' => $forSearch['fname'], 'lname' => $forSearch['lname'], 'age' => $forSearch['age'], 'sex' => $forSearch['sex'], 'sexPref' => $forSearch['sexPref'], 'stars' => $forSearch['stars'], 'profilePic' => $forSearch['profilePic'], 'isOnline' => $isOnline, 'lastSeen' => $forSearch['last_seen'], 'bio' => $forSearch['bio'], 'tags' => $forSearch['tags'], 'stars' => $forSearch['stars']);
 		$result->userData = $userData;
 		$sql4 = $db->select()->from('likes')->where('who', '=', $target)->where('target', '=', $userId);
 		$exec4 = $sql4->execute();
@@ -667,8 +754,22 @@ class UserController extends Controller
 				break ;
 			}
 		}
+		$sql6 = $db->select()->from('profiles')->where('user', '=', $userId);
+		$exec6 = $sql6->execute();
+		$fromDb6 = $exec6->fetch();
+		$result->distance = $this->getKM($fromDb6['latitude'], $fromDb6['longetude'], $forSearch['latitude'], $forSearch['longetude']);
 		return json_encode($result);
 	}
+
+    public function getKM($lat1, $lon1, $lat2, $lon2)
+    {
+	    $theta = $lon1 - $lon2;
+	    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+	    $dist = acos($dist);
+	    $dist = rad2deg($dist);
+	    $kilometres = round($dist * 60 * 1.1515 * 1.609344, 0, PHP_ROUND_HALF_UP);
+	    return $kilometres;
+    }
 
 	public function getInfoForNotification($who)
 	{
@@ -689,14 +790,18 @@ class UserController extends Controller
 
 		$db = new Model;
 		$db = $db->connect();
+		
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $id);
+		$updateStatement2->execute();
+
 		$sql = $db->select()->from('likes')->where('who', '=', $id);
 		$sql = $sql->having('target', '=', $target);
 		$exec = $sql->execute();
 		$fromDb = $exec->fetchAll();
 		if (count($fromDb) == 0)
 		{
-			date_default_timezone_set ('Europe/Kiev');
-			$date = date('Y-m-d H:i:s');
 			$sql = $db->insert(array('who', 'target', 'whenLike'))
 						   ->into('likes')
 						   ->values(array($id, $target, $date));
@@ -729,6 +834,10 @@ class UserController extends Controller
 			$res->removedMatch2 = $exec2;
 
 			$updatedRate = $this->updateRate($target);
+
+			$chatDel = $db->delete()->from('chat')->where('sender', '=', $id)->where('receiver', '=', $target)->orWhere('sender', '=', $target)->where('receiver', '=', $id);
+			$chatDel->execute();
+			
 			$res->msg = "Removed from favorite";
 			$res->check = false;
 		}
@@ -745,17 +854,19 @@ class UserController extends Controller
 
 		$db = new Model;
 		$db = $db->connect();
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $id);
+		$updateStatement2->execute();
+
 		$sql = $db->select()->from('blocks')->where('whoBlock', '=', $id);
 		$sql = $sql->having('target', '=', $target);
 		$exec = $sql->execute();
 		$fromDb = $exec->fetchAll();
-		// $res->check2 = 'who ' . $id . ' target ' . $target;
-		// $res->check3 = $fromDb;
 
 		if (count($fromDb) == 0)
 		{
-			date_default_timezone_set ('Europe/Kiev');
-			$date = date('Y-m-d H:i:s');
 			$sql = $db->insert(array('whoBlock', 'target', 'whenBlock'))
 						   ->into('blocks')
 						   ->values(array($id, $target, $date));
@@ -780,6 +891,12 @@ class UserController extends Controller
 
 		$db = new Model;
 		$db = $db->connect();
+
+		date_default_timezone_set ('Europe/Kiev');
+		$date = date('Y-m-d H:i:s');
+		$updateStatement2 = $db->update(array('last_seen' => $date))->table('users')->where('userId', '=', $userId);
+		$updateStatement2->execute();
+
 		$sql = $db->select()->from('scammers')->where('whoReported', '=', $id);
 		$sql = $sql->having('target', '=', $target);
 		$exec = $sql->execute();
@@ -815,7 +932,7 @@ class UserController extends Controller
 		$fromDb = $exec->fetchAll();
 		$blocks = array();
 		foreach ($fromDb as $key => $block) {
-			strtotime($block['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline=false;
+			strtotime($block['last_seen'] . ' + 15 minutes') > time() ? $isOnline = true : $isOnline = false;
 			$blocks[$key] = array('uId' => $block['userId'], 'profilePic' => $block['profilePic'], 'fname' => $block['fname'], 'lname' => $block['lname'], 'sex' => $block['sex'], 'sexPref' => $block['sexPref'], 'age' => $block['age'], 'lastSeen' => $block['last_seen'], 'isOnline' => $isOnline);
 		}
 		$res->myBlocks = $blocks;
